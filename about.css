@@ -1,0 +1,57 @@
+/* A readable resume: introduction, career column and a consistent knowledge rail. */
+html.about-document{scroll-snap-type:none;scroll-padding-top:88px}
+.about-page{--resume-line:#191a1240;--resume-quiet:#525454;--coral-ink:#942d29}
+.about-page::before,.about-page::after{opacity:.12}
+.about-page .ambient-grain{opacity:.07}
+.about-page .header{position:sticky}
+.about-page .header nav a[aria-current=page]{text-decoration:underline;text-underline-offset:7px;text-decoration-thickness:1px}
+.about-page .header nav a,.about-page .header-action,.about-page .brand{min-height:44px;display:inline-flex;align-items:center}
+.resume{max-width:1160px;padding:40px clamp(24px,4vw,56px) 16px;overflow-wrap:anywhere}
+.resume-top{display:flex;justify-content:space-between;align-items:center;gap:24px;margin-bottom:28px}
+.resume-top .eyebrow{font-size:.625rem}.resume-top h1{font-size:clamp(1.875rem,3vw,2.75rem);line-height:1.15;letter-spacing:-.055em;font-weight:500;margin:8px 0 0}.resume-top h1 span{color:var(--coral)}
+.resume-back{display:inline-flex;gap:20px;align-items:center;min-height:44px;text-decoration:none;font-size:.8125rem;white-space:nowrap}
+.resume-section{min-width:0}
+.resume-section-label{margin-bottom:20px}
+.resume-section h2{font-size:1rem;line-height:1.4;font-weight:600;letter-spacing:-.015em;margin:0}
+.resume-profile{border-block:1px solid var(--resume-line);padding-block:24px 28px;margin-bottom:32px}
+.resume-profile .resume-section-label{display:none}
+.resume-profile-copy{max-width:85ch;display:grid;grid-template-columns:1.5fr 1fr;gap:32px}
+.resume-profile p{font-size:1rem;line-height:1.65;margin:0}.resume-profile p+p{color:var(--resume-quiet)}
+.resume-layout{display:grid;grid-template-columns:minmax(0,1.45fr) minmax(0,1fr);gap:56px;align-items:start}
+.resume-career,.resume-knowledge{min-width:0}
+.resume-knowledge{padding-left:32px;border-left:1px solid var(--resume-line)}
+.resume-section+.resume-section{margin-top:32px;padding-top:24px;border-top:1px solid var(--resume-line)}
+.resume-entry+.resume-entry{margin-top:24px;padding-top:24px;border-top:1px solid var(--resume-line)}
+.resume-entry-top{display:flex;align-items:baseline;justify-content:space-between;gap:12px;flex-wrap:wrap}
+.resume-entry h3{font-size:1.1875rem;line-height:1.3;letter-spacing:-.025em;font-weight:500;margin:0}
+.resume-date{font: .75rem ui-monospace,monospace;white-space:nowrap;color:var(--resume-quiet)}
+.resume-entry p,.resume-entry li{font-size:.9375rem;line-height:1.6}
+.resume-position{margin:8px 0 2px}.resume-location{margin:0;color:var(--resume-quiet)}
+.resume-entry ul{padding-left:18px;margin:14px 0 0;color:var(--resume-quiet)}.resume-entry li+li{margin-top:6px}.resume-education .resume-entry>p:last-child{margin-bottom:0}
+.resume-facts{margin:0}.resume-facts>div+div{margin-top:16px}.resume-facts dt{font-size:.875rem;font-weight:500;line-height:1.45}.resume-facts dd{margin:4px 0 0;font-size:.875rem;line-height:1.6;color:var(--resume-quiet)}
+.resume-languages .resume-facts>div{display:grid;grid-template-columns:70px minmax(0,1fr);gap:12px}.resume-languages .resume-facts dd{margin:0}
+.resume-actions{display:flex;gap:16px;align-items:center;border-top:1px solid var(--resume-line);padding-top:12px;margin-top:36px}
+.resume-actions a,.resume-actions button{display:inline-flex;justify-content:center;align-items:center;gap:12px;min-width:44px;min-height:44px;border:0;padding:8px 4px;background:none;color:var(--ink);text-decoration:none;font-size:.75rem;cursor:pointer}
+.resume-actions #motion-toggle{margin-left:auto;letter-spacing:0}.resume-actions a:hover,.resume-actions button:hover,.resume-back:hover{color:var(--coral-ink)}
+@media(max-width:1000px){.resume{padding-top:32px}.resume-layout{gap:32px;grid-template-columns:minmax(0,1.25fr) minmax(0,1fr)}.resume-knowledge{padding-left:24px}.resume-profile-copy{grid-template-columns:1fr;gap:12px;max-width:75ch}}
+@media(max-width:760px){
+ .resume{padding-inline:24px}.resume-layout{grid-template-columns:1fr;gap:32px}.resume-knowledge{border-left:0;padding-left:0;border-top:1px solid var(--resume-line);padding-top:24px;display:grid;grid-template-columns:1fr 1fr;gap:24px 32px}.resume-knowledge>.resume-section{margin:0;padding:0;border:0}.resume-tools{grid-column:1/-1}.resume-tools .resume-facts{display:grid;grid-template-columns:1fr 1fr;gap:16px 24px}.resume-tools .resume-facts>div{margin:0}
+}
+@media(max-width:600px){
+ .about-page .header nav{display:flex;gap:8px}.about-page .header-action{display:none}.about-page .header-inner{grid-template-columns:1fr auto;padding-inline:20px}
+ .resume{padding:24px 20px max(12px,env(safe-area-inset-bottom))}.resume-top{margin-bottom:20px}.resume-top h1{font-size:1.875rem}.resume-back{display:none}.resume-profile{padding-block:20px;margin-bottom:28px}.resume-layout{gap:28px}
+ .resume-section-label{margin-bottom:16px}.resume-entry p,.resume-entry li,.resume-facts dt,.resume-facts dd{font-size:1rem}.resume-entry h3{font-size:1.1875rem}.resume-entry-top{gap:6px 12px}
+ .resume-knowledge{display:block}.resume-knowledge>.resume-section+.resume-section{margin-top:28px;padding-top:24px;border-top:1px solid var(--resume-line)}.resume-tools .resume-facts{display:block}.resume-tools .resume-facts>div+div{margin-top:16px}
+ .resume-actions{gap:8px;flex-wrap:wrap;margin-top:28px}.resume-actions #motion-toggle{font-size:.6875rem}
+}
+@media print{
+ html.about-document{scroll-padding-top:0}.about-page{background:white}.about-page::before,.about-page::after,.ambient-grain,.about-page .header,.resume-actions,.resume-back,.skip{display:none!important}
+ .resume{max-width:none;padding:0}.resume-top{margin-bottom:16px}.resume-top h1{font-size:1.5rem}.resume-profile{padding-block:16px;margin-bottom:20px}.resume-profile-copy{display:block}.resume-profile p+p{margin-top:10px}.resume-layout{display:block}.resume-section{break-inside:avoid}.resume-section+.resume-section{margin-top:16px;padding-top:16px}.resume-knowledge{border:0;padding:16px 0 0;display:block}.resume-tools .resume-facts{display:block}.resume-section p,.resume-section li,.resume-facts dt,.resume-facts dd{font-size:.6875rem}.resume-entry h3{font-size:1rem}.resume-section-label{margin-bottom:10px}.resume-facts>div+div{margin-top:8px}@page{margin:15mm}
+}
+
+/* Shared final section closes both columns without a long empty column. */
+.resume-layout+.resume-strengths{border-top:1px solid var(--resume-line);margin-top:32px;padding-top:24px}
+.resume-strengths>.resume-facts{display:grid;grid-template-columns:1fr 1fr;gap:16px 40px}
+.resume-strengths>.resume-facts>div{margin:0}
+@media(max-width:600px){.resume-strengths>.resume-facts{grid-template-columns:1fr;gap:16px}.resume-layout+.resume-strengths{margin-top:28px}}
+@media print{.resume-strengths>.resume-facts{display:block}}

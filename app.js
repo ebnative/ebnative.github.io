@@ -1,9 +1,29 @@
 (() => {
   'use strict';
+  // Keep navigation available in the hero and out of the two image walls.
+  const header = document.querySelector('.header');
+  const heroSection = document.querySelector('#top');
+  let headerFrame = 0;
+  function updateHeader() {
+    headerFrame = 0;
+    const hidden = heroSection.getBoundingClientRect().bottom <= header.offsetHeight;
+    header.classList.toggle('is-hidden', hidden);
+    header.inert = hidden;
+    header.setAttribute('aria-hidden', String(hidden));
+    if (hidden && header.contains(document.activeElement)) document.activeElement.blur();
+  }
+  function scheduleHeader() {
+    if (!headerFrame) headerFrame = requestAnimationFrame(updateHeader);
+  }
+  window.addEventListener('scroll', scheduleHeader, {passive:true});
+  window.addEventListener('resize', scheduleHeader);
+  window.addEventListener('pageshow', scheduleHeader);
+  updateHeader();
+
   const typeSelect = document.querySelector('#type-filter');
   const clientSelect = document.querySelector('#client-filter');
   const resetButton = document.querySelector('#clear-filters');
-  const cards = Array.from(document.querySelectorAll('.work-card'));
+  const cards = Array.from(document.querySelectorAll('#work-grid .work-card'));
   const count = document.querySelector('#result-count');
   const empty = document.querySelector('#empty-state');
   const dialog = document.querySelector('#work-dialog');
@@ -16,6 +36,7 @@
   const next = document.querySelector('#dialog-next');
   let current = null;
   let lastTrigger = null;
+  let dialogCards = [];
 
   function visibleCards() { return cards.filter(card => !card.hidden); }
   function update() {
@@ -39,13 +60,18 @@
     typeSelect.focus();
   });
 
-  function openCard(card) {
+  function openCard(card, contextCards, trigger) {
     current = card;
     const button = card.querySelector('.card-button');
-    if (!dialog.open) lastTrigger = button;
+    if (!dialog.open) {
+      lastTrigger = trigger || button;
+      dialogCards = contextCards || visibleCards();
+    }
+    prev.disabled = next.disabled = dialogCards.length < 2;
     title.textContent = button.dataset.title;
     client.textContent = button.dataset.clientLabel;
     category.textContent = button.dataset.categoryLabel;
+    document.querySelector('.dialog-note').textContent = card.querySelector('.card-description').textContent;
     media.replaceChildren();
     let element;
     if (button.dataset.asset.endsWith('.mp4')) {
@@ -66,7 +92,7 @@
     close.focus();
   }
   function step(offset) {
-    const visible = visibleCards();
+    const visible = dialogCards;
     if (!visible.length || !current) return;
     const index = visible.indexOf(current);
     openCard(visible[(index + offset + visible.length) % visible.length]);
@@ -90,5 +116,299 @@
     if (event.key === 'ArrowRight') { event.preventDefault(); step(1); }
     if (event.key === 'ArrowLeft') { event.preventDefault(); step(-1); }
   });
+
+  // The viewport gallery and the archive share records, but keep independent state.
+  const showcase = document.querySelector('#work');
+  const selectedGrid = document.querySelector('#selected-grid');
+  const selectedPage = document.querySelector('#selected-page');
+  const pauseRotation = document.querySelector('#selected-pause');
+  const reducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)');
+  const cardById = new Map(cards.map(card => [card.dataset.id, card]));
+  const rotation = showcase.dataset.order.split(',').map(id => cardById.get(id));
+  const selectionSize = Number(selectedGrid.dataset.pageSize);
+  const pageCount = Math.ceil(rotation.length / selectionSize);
+  let selectionPage = 0;
+  let selectionCards = rotation.slice(0, selectionSize);
+  let rotationPaused = reducedMotion.matches;
+  let showcaseVisible = false;
+  let gridHovered = false;
+  let rotating = false;
+  let rotationTimer;
+  let selectedSwipe = null;
+  let selectedSuppressClickUntil = 0;
+
+  function canRotate() {
+    return showcaseVisible && !rotationPaused && !document.hidden && !dialog.open &&
+      !gridHovered && !selectedGrid.contains(document.activeElement);
+  }
+  function scheduleRotation() {
+    clearTimeout(rotationTimer);
+    if (canRotate() && !rotating) rotationTimer = setTimeout(() => changeSelection(1, true), 6500);
+  }
+  function updateRotationControl() {
+    pauseRotation.setAttribute('aria-pressed', String(rotationPaused));
+    pauseRotation.textContent = rotationPaused ? 'Play rotation' : 'Pause rotation';
+  }
+  async function changeSelection(offset, automatic = false) {
+    if (rotating || (automatic && !canRotate())) return;
+    rotating = true;
+    clearTimeout(rotationTimer);
+    const targetPage = (selectionPage + offset + pageCount) % pageCount;
+    const nextCards = Array.from({length: Math.min(selectionSize, rotation.length)}, (_, index) =>
+      rotation[(targetPage * selectionSize + index) % rotation.length]);
+    const tiles = nextCards.map(card => {
+      const tile = card.cloneNode(true);
+      tile.className = 'showcase-tile';
+      tile.hidden = false;
+      tile.querySelector('img').loading = 'eager';
+      return tile;
+    });
+    await Promise.allSettled(tiles.map(tile => tile.querySelector('img').decode()));
+    if (!automatic || canRotate()) {
+      selectionPage = targetPage;
+      selectionCards = nextCards;
+      selectedGrid.replaceChildren(...tiles);
+      selectedPage.textContent = `${String(selectionPage + 1).padStart(2, '0')} / ${String(pageCount).padStart(2, '0')}`;
+    }
+    rotating = false;
+    scheduleRotation();
+  }
+  document.querySelector('#selected-prev').addEventListener('click', () => changeSelection(-1));
+  document.querySelector('#selected-next').addEventListener('click', () => changeSelection(1));
+  pauseRotation.addEventListener('click', () => {
+    rotationPaused = !rotationPaused;
+    updateRotationControl();
+    scheduleRotation();
+  });
+  selectedGrid.addEventListener('pointerenter', event => {
+    if (event.pointerType !== 'touch') { gridHovered = true; scheduleRotation(); }
+  });
+  selectedGrid.addEventListener('pointerleave', () => { gridHovered = false; scheduleRotation(); });
+  function positionShowcasePanel(event) {
+    const tile = event.target.closest('.showcase-tile');
+    if (!tile) return;
+    const rect = tile.getBoundingClientRect();
+    // Keep the extended panel inside the viewport, including the final grid row.
+    const headerBottom = header.inert ? 0 : header.getBoundingClientRect().bottom;
+    const style = getComputedStyle(tile);
+    const head = parseFloat(style.getPropertyValue('--panel-head')) || 44;
+    const tail = parseFloat(style.getPropertyValue('--panel-tail')) || 180;
+    const lift = Math.min(0, window.innerHeight - 8 - (rect.bottom + tail));
+    const shift = Math.max(headerBottom + 8 - (rect.top - head), lift);
+    tile.style.setProperty('--panel-shift-y', `${shift}px`);
+  }
+  selectedGrid.addEventListener('pointerover', positionShowcasePanel);
+  selectedGrid.addEventListener('focusin', event => {
+    positionShowcasePanel(event);
+    scheduleRotation();
+  });
+  selectedGrid.addEventListener('focusout', () => setTimeout(scheduleRotation, 0));
+  selectedGrid.addEventListener('click', event => {
+    if (performance.now() < selectedSuppressClickUntil) return;
+    const button = event.target.closest('.card-button');
+    if (!button) return;
+    openCard(cardById.get(button.closest('.showcase-tile').dataset.id), selectionCards, button);
+    scheduleRotation();
+  });
+  selectedGrid.addEventListener('pointerdown', event => {
+    if (event.isPrimary && event.pointerType !== 'mouse') selectedSwipe = {id:event.pointerId,x:event.clientX,y:event.clientY};
+  });
+  window.addEventListener('pointerup', event => {
+    if (!selectedSwipe || event.pointerId !== selectedSwipe.id) return;
+    const dx = event.clientX - selectedSwipe.x;
+    const dy = event.clientY - selectedSwipe.y;
+    selectedSwipe = null;
+    if (Math.abs(dx) > 50 && Math.abs(dx) > Math.abs(dy) * 1.2) {
+      selectedSuppressClickUntil = performance.now() + 500;
+      changeSelection(dx < 0 ? 1 : -1);
+    }
+  });
+  window.addEventListener('pointercancel', () => { selectedSwipe = null; });
+  new IntersectionObserver(entries => {
+    showcaseVisible = entries[0].isIntersecting && entries[0].intersectionRatio >= .1;
+    scheduleRotation();
+  }, {threshold: [0, .1]}).observe(selectedGrid);
+  document.addEventListener('visibilitychange', scheduleRotation);
+  dialog.addEventListener('close', scheduleRotation);
+  reducedMotion.addEventListener('change', () => {
+    if (reducedMotion.matches) rotationPaused = true;
+    updateRotationControl();
+    scheduleRotation();
+  });
+  updateRotationControl();
+
+  const coverflow = document.querySelector('.coverflow');
+  const track = coverflow.querySelector('.coverflow-track');
+  const slides = Array.from(track.querySelectorAll('.coverflow-slide'));
+  const coverflowIndex = document.querySelector('#coverflow-index');
+  const coverflowTitle = document.querySelector('#coverflow-title');
+  const coverflowDescription = document.querySelector('#coverflow-description');
+  const dots = document.querySelector('.coverflow-dots');
+  const collectionButtons = Array.from(document.querySelectorAll('.collection-filter'));
+  const heroPrev = document.querySelector('#coverflow-prev');
+  const heroNext = document.querySelector('#coverflow-next');
+  let collection = coverflow.dataset.collection;
+  let activeSlides = [];
+  let selected = 0;
+  let pointerStart = null;
+  let suppressClickUntil = 0;
+  let dragProgress = 0;
+  let dragFrame = 0;
+
+  function renderCoverflow(preview = false) {
+    const cardSize = Math.max(100, Math.min(track.clientHeight - 40, window.innerWidth * (window.innerWidth <= 700 ? .54 : window.innerWidth <= 1024 ? .38 : .29), 410));
+    track.style.setProperty('--hero-card-size', `${cardSize}px`);
+    // Each successive pair tucks farther behind the pair in front of it.
+    const spread = window.innerWidth <= 700 ? [0,.32,.51,.65] : window.innerWidth <= 1024 ? [0,.45,.78,1.02] : [0,.66,1.14,1.48];
+    const interpolate = (values, depth) => {
+      const lo = Math.min(3, Math.floor(depth));
+      return values[lo] + (values[Math.min(lo + 1,3)] - values[lo]) * (depth - lo);
+    };
+    slides.forEach(slide => {
+      const index = activeSlides.indexOf(slide);
+      slide.hidden = index === -1;
+      if (index === -1) {
+        slide.classList.remove('is-active', 'is-visible');
+        slide.setAttribute('aria-hidden', 'true');
+        slide.querySelector('button').tabIndex = -1;
+        return;
+      }
+      let distance = (index - selected + activeSlides.length) % activeSlides.length;
+      if (distance > activeSlides.length / 2) distance -= activeSlides.length;
+      distance -= dragProgress;
+      const depth = Math.abs(distance);
+      const visible = depth <= (dragProgress ? 3.7 : 3);
+      slide.style.setProperty('--x', `${Math.sign(distance) * cardSize * (interpolate(spread,depth) + Math.max(0,depth-3)*.2)}px`);
+      slide.style.setProperty('--rot', `${Math.sign(distance) * -Math.min(depth * 17,38)}deg`);
+      slide.style.setProperty('--scale', String(interpolate([1,.88,.75,.63],depth)));
+      slide.style.setProperty('--opacity', visible ? '1' : '0');
+      slide.style.setProperty('--brightness', String(interpolate([1,.96,.9,.82],depth)));
+      slide.style.zIndex = String(Math.round((slides.length - depth) * 10));
+      slide.classList.toggle('is-visible', visible);
+      slide.classList.toggle('is-active', distance === 0);
+      slide.setAttribute('aria-hidden', String(!visible));
+      const button = slide.querySelector('button');
+      button.tabIndex = distance === 0 ? 0 : -1;
+      button.setAttribute('aria-label', `${distance === 0 ? 'Open' : 'Show'} ${slide.dataset.title}`);
+      const img = slide.querySelector('img');
+      if (visible && !img.getAttribute('src')) img.src = img.dataset.src;
+    });
+    if (preview) return;
+    const total = activeSlides.length;
+    coverflowIndex.textContent = `${String(total ? selected + 1 : 0).padStart(2, '0')} / ${String(total).padStart(2, '0')}`;
+    coverflowTitle.textContent = total ? activeSlides[selected].dataset.title : '';
+    coverflowDescription.textContent = total ? activeSlides[selected].dataset.description : '';
+    const restoreDotFocus = dots.contains(document.activeElement);
+    const firstDot = Math.max(0, Math.min(selected - 3, total - 7));
+    dots.replaceChildren(...activeSlides.slice(firstDot, firstDot + 7).map((slide, offset) => {
+      const button = document.createElement('button');
+      const index = firstDot + offset;
+      button.type = 'button';
+      button.dataset.index = index;
+      button.setAttribute('aria-label', `Image ${index + 1}: ${slide.dataset.title}`);
+      button.setAttribute('aria-pressed', String(index === selected));
+      button.tabIndex = index === selected ? 0 : -1;
+      if ((offset === 0 && firstDot > 0) || (offset === 6 && firstDot + 7 < total)) button.className = 'dot-edge';
+      return button;
+    }));
+    if (restoreDotFocus) dots.querySelector('[aria-pressed="true"]')?.focus({preventScroll:true});
+    dots.hidden = total < 2;
+    heroPrev.disabled = heroNext.disabled = total < 2;
+    coverflow.querySelector('.hero-empty').hidden = total !== 0;
+    track.hidden = total === 0;
+  }
+
+  function filterHero() {
+    activeSlides = slides.filter(slide =>
+      collection === 'all' || (collection === 'ai' && slide.dataset.category === 'ai-image') ||
+        (collection === 'illustrator' && slide.dataset.illustrator === 'true') ||
+        slide.dataset.category === collection);
+    selected = 0;
+    document.querySelector('#hero-result-count').textContent = `${activeSlides.length} ${activeSlides.length === 1 ? 'work' : 'works'}`;
+    collectionButtons.forEach(button => button.setAttribute('aria-pressed', String(button.dataset.collection === collection)));
+    renderCoverflow();
+  }
+  collectionButtons.forEach(button => button.addEventListener('click', () => {
+    collection = button.dataset.collection;
+    filterHero();
+  }));
+  document.querySelector('#hero-reset').addEventListener('click', () => {
+    collection = 'all'; filterHero();
+    collectionButtons.find(button => button.dataset.collection === 'all').focus();
+  });
+
+  function moveCoverflow(offset) {
+    if (activeSlides.length < 2) return;
+    selected = (selected + offset + activeSlides.length) % activeSlides.length;
+    renderCoverflow();
+  }
+  heroPrev.addEventListener('click', () => moveCoverflow(-1));
+  heroNext.addEventListener('click', () => moveCoverflow(1));
+  dots.addEventListener('click', event => {
+    const button = event.target.closest('button');
+    if (!button) return;
+    selected = Number(button.dataset.index);
+    renderCoverflow();
+  });
+  coverflow.addEventListener('keydown', event => {
+    if (event.target.closest('select, .hero-filters')) return;
+    if (event.key === 'ArrowLeft') { event.preventDefault(); moveCoverflow(-1); }
+    if (event.key === 'ArrowRight') { event.preventDefault(); moveCoverflow(1); }
+  });
+  track.addEventListener('dragstart', event => event.preventDefault());
+  track.addEventListener('pointerdown', event => {
+    if (!event.isPrimary || event.button !== 0) return;
+    pointerStart = {x:event.clientX,y:event.clientY,id:event.pointerId,time:event.timeStamp,horizontal:false};
+  });
+  window.addEventListener('pointermove', event => {
+    if (!pointerStart || pointerStart.id !== event.pointerId || activeSlides.length < 2) return;
+    const dx = event.clientX - pointerStart.x;
+    const dy = event.clientY - pointerStart.y;
+    if (!pointerStart.horizontal) {
+      if (Math.max(Math.abs(dx),Math.abs(dy)) < 8) return;
+      if (Math.abs(dy) > Math.abs(dx)) { pointerStart = null; return; }
+      pointerStart.horizontal = true;
+      track.setPointerCapture(event.pointerId);
+      track.classList.add('is-dragging');
+    }
+    event.preventDefault();
+    const size = parseFloat(track.style.getPropertyValue('--hero-card-size'));
+    dragProgress = Math.max(-1,Math.min(1,-dx / (size * .6)));
+    if (!dragFrame) dragFrame = requestAnimationFrame(() => { dragFrame = 0; renderCoverflow(true); });
+  }, {passive:false});
+  function finishDrag() {
+    cancelAnimationFrame(dragFrame); dragFrame = 0; dragProgress = 0;
+    track.classList.remove('is-dragging');
+    pointerStart = null;
+  }
+  window.addEventListener('pointerup', event => {
+    if (!pointerStart || pointerStart.id !== event.pointerId) return;
+    const dx = event.clientX - pointerStart.x;
+    const dy = event.clientY - pointerStart.y;
+    const elapsed = Math.max(1,event.timeStamp - pointerStart.time);
+    const horizontal = pointerStart.horizontal;
+    finishDrag();
+    if (horizontal) suppressClickUntil = performance.now() + 500;
+    if (horizontal && Math.abs(dx) > Math.abs(dy) && (Math.abs(dx) > 40 || (Math.abs(dx) > 16 && Math.abs(dx) / elapsed > .35))) {
+      moveCoverflow(dx < 0 ? 1 : -1);
+    } else renderCoverflow();
+  });
+  window.addEventListener('pointercancel', () => { finishDrag(); renderCoverflow(); });
+  slides.forEach(slide => slide.querySelector('button').addEventListener('click', event => {
+    if (performance.now() < suppressClickUntil) return;
+    const index = activeSlides.indexOf(slide);
+    if (index === -1) return;
+    if (index !== selected) { selected = index; renderCoverflow(); return; }
+    const heroCards = activeSlides.map(item => cards.find(card => card.dataset.id === item.dataset.id));
+    openCard(heroCards[selected], heroCards, event.currentTarget);
+  }));
+  new ResizeObserver(() => renderCoverflow()).observe(track);
+  const motionToggle = document.querySelector('#motion-toggle');
+  motionToggle.addEventListener('click', () => {
+    const paused = document.body.classList.toggle('motion-paused');
+    motionToggle.setAttribute('aria-pressed', String(paused));
+    motionToggle.textContent = paused ? 'Play background' : 'Pause background';
+  });
+  filterHero();
   update();
 })();
