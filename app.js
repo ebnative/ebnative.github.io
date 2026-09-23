@@ -97,10 +97,29 @@
     const index = visible.indexOf(current);
     openCard(visible[(index + offset + visible.length) % visible.length]);
   }
-  document.querySelector('#work-grid').addEventListener('click', event => {
+  const archiveGrid = document.querySelector('#work-grid');
+  let archivePreview = null;
+  let archivePointer = 'mouse';
+  function clearArchivePreview() {
+    archivePreview?.classList.remove('is-preview');
+    archivePreview?.querySelector('.card-button').removeAttribute('aria-expanded');
+    archivePreview = null;
+  }
+  archiveGrid.addEventListener('pointerdown', event => {archivePointer=event.pointerType;});
+  archiveGrid.addEventListener('click', event => {
     const button = event.target.closest('.card-button');
-    if (button) openCard(button.closest('.work-card'));
+    if (!button) return;
+    const card=button.closest('.work-card');
+    if (innerWidth>=701 && event.detail>0 && archivePointer!=='mouse' && archivePreview!==card) {
+      clearArchivePreview();archivePreview=card;card.classList.add('is-preview');button.setAttribute('aria-expanded','true');return;
+    }
+    clearArchivePreview();openCard(card);
   });
+  document.addEventListener('pointerdown',event=>{if(archivePreview&&!archivePreview.contains(event.target))clearArchivePreview();});
+  document.addEventListener('keydown',event=>{if(event.key==='Escape')clearArchivePreview();});
+  window.addEventListener('resize',clearArchivePreview);
+  typeSelect.addEventListener('change',clearArchivePreview);
+  clientSelect.addEventListener('change',clearArchivePreview);
   prev.addEventListener('click', () => step(-1));
   next.addEventListener('click', () => step(1));
   close.addEventListener('click', () => dialog.close());
@@ -136,10 +155,41 @@
   let rotationTimer;
   let selectedSwipe = null;
   let selectedSuppressClickUntil = 0;
+  let touchPreview = null;
+  let lastSelectionPointer = 'mouse';
+  function clearTouchPreview() {
+    if (!touchPreview) return;
+    touchPreview.classList.remove('is-preview');
+    touchPreview.querySelector('.card-button').removeAttribute('aria-expanded');
+    touchPreview.querySelector('.preview-close')?.remove();
+    touchPreview = null;
+    selectedGrid.dispatchEvent(new CustomEvent('showcasepreview', {detail:null}));
+    scheduleRotation();
+  }
+  function showTouchPreview(tile, event) {
+    clearTouchPreview();
+    touchPreview = tile;
+    tile.classList.add('is-preview');
+    tile.querySelector('.card-button').setAttribute('aria-expanded','true');
+    const dismiss = document.createElement('button');
+    dismiss.type='button';dismiss.className='preview-close';dismiss.textContent='×';
+    dismiss.setAttribute('aria-label','Close preview');
+    dismiss.addEventListener('click', e => {e.stopPropagation();clearTouchPreview();});
+    tile.append(dismiss);
+    positionShowcasePanel({target:tile});
+    selectedGrid.dispatchEvent(new CustomEvent('showcasepreview', {detail:{tile,clientX:event.clientX,clientY:event.clientY}}));
+    scheduleRotation();
+  }
+  document.addEventListener('pointerdown', event => {
+    if (touchPreview && !touchPreview.contains(event.target)) clearTouchPreview();
+  });
+  document.addEventListener('keydown', event => {if(event.key==='Escape')clearTouchPreview();});
+  window.addEventListener('resize',clearTouchPreview);
+  dialog.addEventListener('close',clearTouchPreview);
 
   function canRotate() {
     return showcaseVisible && !rotationPaused && !document.hidden && !dialog.open &&
-      !gridHovered && !selectedGrid.contains(document.activeElement);
+      !touchPreview && !gridHovered && !selectedGrid.contains(document.activeElement);
   }
   function scheduleRotation() {
     clearTimeout(rotationTimer);
@@ -167,6 +217,7 @@
     if (!automatic || canRotate()) {
       selectionPage = targetPage;
       selectionCards = nextCards;
+      clearTouchPreview();
       selectedGrid.replaceChildren(...tiles);
       selectedPage.textContent = `${String(selectionPage + 1).padStart(2, '0')} / ${String(pageCount).padStart(2, '0')}`;
     }
@@ -193,7 +244,13 @@
     const style = getComputedStyle(tile);
     const head = parseFloat(style.getPropertyValue('--panel-head')) || 44;
     const tail = parseFloat(style.getPropertyValue('--panel-tail')) || 180;
-    const lift = Math.min(0, window.innerHeight - 8 - (rect.bottom + tail));
+    const button = tile.querySelector('.card-button');
+    const cardHeight = tile.classList.contains('is-preview') ? button.offsetHeight : rect.height;
+    const cardWidth = tile.classList.contains('is-preview') ? button.offsetWidth : rect.width;
+    const desiredX = (rect.width-cardWidth)/2;
+    const shiftX = Math.max(24-rect.left, Math.min(desiredX, document.documentElement.clientWidth-24-rect.left-cardWidth));
+    tile.style.setProperty('--panel-shift-x', `${shiftX}px`);
+    const lift = Math.min(0, document.documentElement.clientHeight - 8 - (rect.top + cardHeight + tail));
     const shift = Math.max(headerBottom + 8 - (rect.top - head), lift);
     tile.style.setProperty('--panel-shift-y', `${shift}px`);
   }
@@ -207,10 +264,18 @@
     if (performance.now() < selectedSuppressClickUntil) return;
     const button = event.target.closest('.card-button');
     if (!button) return;
-    openCard(cardById.get(button.closest('.showcase-tile').dataset.id), selectionCards, button);
+    const tile = button.closest('.showcase-tile');
+    const touch = event.pointerType === 'touch' || event.pointerType === 'pen' || (event.detail > 0 && lastSelectionPointer !== 'mouse');
+    if (touch && innerWidth >= 701 && touchPreview !== tile) {
+      showTouchPreview(tile,event);
+      return;
+    }
+    clearTouchPreview();
+    openCard(cardById.get(tile.dataset.id), selectionCards, button);
     scheduleRotation();
   });
   selectedGrid.addEventListener('pointerdown', event => {
+    lastSelectionPointer = event.pointerType;
     if (event.isPrimary && event.pointerType !== 'mouse') selectedSwipe = {id:event.pointerId,x:event.clientX,y:event.clientY};
   });
   window.addEventListener('pointerup', event => {
@@ -226,6 +291,7 @@
   window.addEventListener('pointercancel', () => { selectedSwipe = null; });
   new IntersectionObserver(entries => {
     showcaseVisible = entries[0].isIntersecting && entries[0].intersectionRatio >= .1;
+    if (!showcaseVisible) clearTouchPreview();
     scheduleRotation();
   }, {threshold: [0, .1]}).observe(selectedGrid);
   document.addEventListener('visibilitychange', scheduleRotation);
@@ -256,10 +322,11 @@
   let dragFrame = 0;
 
   function renderCoverflow(preview = false) {
-    const cardSize = Math.max(100, Math.min(track.clientHeight - 40, window.innerWidth * (window.innerWidth <= 700 ? .54 : window.innerWidth <= 1024 ? .38 : .29), 410));
+    const tabletGallery = innerWidth >= 701 && (innerWidth <= 1100 || (navigator.maxTouchPoints > 0 && innerWidth <= 1400));
+    const cardSize = Math.max(100, Math.min(track.clientHeight - (tabletGallery ? 16 : 40), innerWidth * (innerWidth <= 700 ? .54 : tabletGallery ? .64 : .29), tabletGallery ? 680 : 410));
     track.style.setProperty('--hero-card-size', `${cardSize}px`);
     // Each successive pair tucks farther behind the pair in front of it.
-    const spread = window.innerWidth <= 700 ? [0,.32,.51,.65] : window.innerWidth <= 1024 ? [0,.45,.78,1.02] : [0,.66,1.14,1.48];
+    const spread = window.innerWidth <= 700 ? [0,.32,.51,.65] : tabletGallery ? [0,.25,.43,.57] : [0,.66,1.14,1.48];
     const interpolate = (values, depth) => {
       const lo = Math.min(3, Math.floor(depth));
       return values[lo] + (values[Math.min(lo + 1,3)] - values[lo]) * (depth - lo);

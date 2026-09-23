@@ -4,7 +4,7 @@
 (() => {
   'use strict';
   const grid = document.querySelector('#selected-grid');
-  const fine = matchMedia('(hover:hover) and (min-width:701px)');
+  const fine = matchMedia('(min-width:701px)');
   const reduced = matchMedia('(prefers-reduced-motion:reduce)');
   const canvas = document.createElement('canvas');
   canvas.className = 'holo-canvas';
@@ -76,7 +76,9 @@
   }
   async function activate(event) {
     if (!fine.matches || failed) return;
-    const panel=event.target.closest('.showcase-tile')?.querySelector('.card-overlay');
+    const tile=event.target.closest('.showcase-tile');
+    if (!tile || (!matchMedia('(hover:hover)').matches && !tile.classList.contains('is-preview'))) return;
+    const panel=tile.querySelector('.card-overlay');
     if (!panel) return;
     point(event,panel);
     if (active===panel) {requestFrame();return;}
@@ -87,14 +89,18 @@
       panel.append(canvas);panel.dataset.holoReady='true';requestFrame();
     } catch { failed=true;stop(); /* Retain the quiet CSS fallback. */ }
   }
+  grid.addEventListener('showcasepreview',event=>{
+    if(!event.detail){stop();return;}
+    activate({target:event.detail.tile,clientX:event.detail.clientX,clientY:event.detail.clientY});
+  });
   grid.addEventListener('pointerover',activate);
   grid.addEventListener('focusin',activate);
   grid.addEventListener('pointermove',event=>{if(active){point(event,active);requestFrame();}});
   grid.addEventListener('pointerout',event=>{
     const tile=event.target.closest('.showcase-tile');
-    if(tile&&!tile.contains(event.relatedTarget)&&!tile.contains(document.activeElement))stop();
+    if(tile&&!tile.classList.contains('is-preview')&&!tile.contains(event.relatedTarget)&&!tile.contains(document.activeElement))stop();
   });
-  grid.addEventListener('focusout',()=>{if(!grid.matches(':hover'))stop();});
+  grid.addEventListener('focusout',()=>{if(!grid.matches(':hover')&&!grid.querySelector('.is-preview'))stop();});
   new MutationObserver(()=>{if(active&&!active.isConnected)stop();}).observe(grid,{childList:true});
   document.addEventListener('visibilitychange',()=>{if(document.hidden)stop();});
   fine.addEventListener('change',()=>{if(!fine.matches)stop();});

@@ -99,7 +99,7 @@ html{scroll-snap-type:y mandatory;scroll-padding-top:0}
 @media(prefers-reduced-motion:reduce){html{scroll-behavior:auto}.showcase-tile{animation:none}}
 
 /* Selected work: a fixed image wall with an expanded anthracite information panel. */
-@media(hover:hover) and (min-width:701px){
+@media(min-width:701px){
  .showcase-tile{position:relative;z-index:0;transition:filter .25s ease}
  .showcase-tile .card-button{overflow:visible;border-radius:0;transition:transform .25s var(--ease)}
  .showcase-tile .card-art{z-index:1}
@@ -184,7 +184,7 @@ body::after{background:radial-gradient(ellipse 23% 23% at 58% 53%,#ffb87770 0%,#
 .card-description{display:none}
 .showcase-tile .card-art{aspect-ratio:1;transform:none;isolation:isolate}
 @media(max-width:700px){.showcase-grid{grid-template-columns:repeat(3,minmax(0,1fr));gap:6px}}
-@media(hover:hover) and (min-width:701px){
+@media(min-width:701px){
  .showcase-tile .card-overlay{inset:calc(-1 * var(--panel-head)) -16px calc(-1 * var(--panel-tail));isolation:isolate}
  .showcase-tile .card-overlay::before,.showcase-tile .card-overlay::after{content:'';position:absolute;inset:0;z-index:-1;pointer-events:none;opacity:0;transition:opacity .25s ease}
  .showcase-tile .card-overlay::before{background:radial-gradient(ellipse at var(--holo-x,50%) var(--holo-y,50%),#dcaaee45,transparent 60%),linear-gradient(var(--holo-angle,130deg),#dc82ce33,#75b8e933,#83d5b133,#f0c88633,#e594bb33,#92b4e833);background-size:200% 200%;background-position:var(--holo-x,50%) var(--holo-y,50%);mix-blend-mode:screen}
@@ -195,7 +195,7 @@ body::after{background:radial-gradient(ellipse 23% 23% at 58% 53%,#ffb87770 0%,#
  .showcase-tile .card-kind{top:calc(100% - var(--panel-tail) + 18px)}
  .showcase-tile .card-description{display:-webkit-box;-webkit-line-clamp:4;-webkit-box-orient:vertical;overflow:hidden;position:absolute;bottom:18px;left:16px;right:16px;margin:0;color:#f0efed;font-size:12px;line-height:1.55;font-weight:400;letter-spacing:0;text-shadow:0 1px 3px #0005}
 }
-@media(hover:hover) and (min-width:701px) and (max-height:550px){
+@media(min-width:701px) and (max-height:550px){
  .showcase-tile{--panel-head:26px;--panel-tail:96px}
  .showcase-tile .card-overlay .card-meta{top:5px;font-size:10px}
  .showcase-tile .card-overlay .card-title{top:calc(100% - 88px);font-size:12px;right:70px;line-height:1.15}
@@ -263,7 +263,7 @@ body::after{background:radial-gradient(ellipse 23% 23% at 58% 53%,#ffb87770 0%,#
 .header{transition:transform .28s var(--ease),opacity .28s ease,visibility .28s}
 .header.is-hidden{transform:translateY(-100%);opacity:0;visibility:hidden;pointer-events:none}
 #work.showcase,.archive{padding-top:clamp(24px,3vw,42px)}
-@media(hover:hover) and (min-width:701px) and (max-width:1200px) and (min-height:551px){
+@media(min-width:701px) and (max-width:1200px) and (min-height:551px){
  .showcase-tile .card-overlay .card-title{right:16px;font-size:16px}
  .showcase-tile .card-kind{top:auto;bottom:calc(var(--panel-tail) - 78px);left:16px;right:16px;max-width:none;text-align:left;font-size:10px}
  .showcase-tile .card-description{font-size:11px;line-height:1.45}
@@ -287,3 +287,41 @@ body::after{background:radial-gradient(ellipse 23% 23% at 58% 53%,#ffb87770 0%,#
  gap:var(--selection-gap);width:100%;height:100%;
  justify-content:space-between;align-content:space-between;
 }
+
+/* On tablets, reserve the hero for artwork and keep text compact. */
+@media(min-width:701px) and (max-width:1100px), (min-width:701px) and (max-width:1400px) and (any-pointer:coarse){
+ .hero-intro{padding-block:12px;gap:16px}.hero h1{font-size:32px;margin-top:6px}.hero-intro .eyebrow{font-size:9px}.hero-aside{display:none}
+ .hero-filters{padding-block:2px}.collection-filters{flex-wrap:nowrap;overflow-x:auto;scrollbar-width:none;gap:20px}.collection-filter{flex-shrink:0;font-size:11px;min-height:44px}
+ .coverflow-top{padding-top:6px;font-size:9px}.coverflow-bottom{min-height:72px;padding-block:6px 10px;gap:16px}
+ .coverflow-caption{grid-template-columns:max-content minmax(100px,1fr) minmax(160px,1.3fr);gap:12px}.coverflow-caption strong{font-size:19px}#coverflow-description{grid-column:auto;font-size:11px;line-height:1.45}
+ .coverflow-dots{padding:0;min-height:44px}.hero-tail{min-height:40px}
+}
+/* Touch preview uses the same anthracite / holographic material as mouse hover. */
+@media(min-width:701px){
+ .showcase-tile.is-preview{z-index:10;--preview-size:clamp(240px,28vw,300px)}
+ .showcase-tile.is-preview .card-button{width:var(--preview-size);height:var(--preview-size);transform:translate(var(--panel-shift-x,0px),var(--panel-shift-y,0px))}
+ .showcase-tile.is-preview .card-art{height:100%;aspect-ratio:1}
+ .showcase-tile.is-preview .card-overlay{opacity:1;visibility:visible;pointer-events:auto;display:block;background:#292b2e;padding:0}
+ .showcase-tile.is-preview .card-overlay::before,.showcase-tile.is-preview .card-overlay::after{opacity:.15}
+ .showcase-tile.is-preview .card-kind{display:block;top:auto;bottom:calc(var(--panel-tail) - 76px);left:16px;right:16px;max-width:none;text-align:left}
+ .showcase-tile.is-preview .card-overlay .card-title{font-size:18px;right:16px}
+ .showcase-tile.is-preview .card-description{font-size:12px;line-height:1.45}
+ .showcase-grid:has(.is-preview) .showcase-tile:not(.is-preview){filter:brightness(.45) saturate(.8)}
+ .preview-close{position:absolute;z-index:4;left:calc(var(--panel-shift-x,0px) + var(--preview-size) - 28px);top:calc(var(--panel-shift-y,0px) - var(--panel-head));width:44px;height:44px;padding:0;border:0;background:#292b2e;color:#fff;font-size:24px}
+ .showcase-tile.is-preview .card-overlay .card-meta{right:44px}
+}
+@media(hover:none) and (min-width:701px){
+ .showcase-tile:not(.is-preview){z-index:0}
+ .showcase-tile:not(.is-preview) .card-button{transform:none}
+ .showcase-tile:not(.is-preview) .card-overlay{opacity:0;visibility:hidden;pointer-events:none}
+ .showcase-grid:not(:has(.is-preview)) .showcase-tile{filter:none}
+ .showcase-note{font-size:0}.showcase-note::after{content:'Tap to preview · Tap again to open';font-size:11px}
+}
+
+@media(hover:none) and (min-width:701px){
+ .archive .work-card:not(.is-preview) .card-overlay{opacity:0;visibility:hidden;pointer-events:none}
+ .archive .work-card.is-preview .card-overlay{opacity:1;visibility:visible}
+}
+
+#work.showcase{overflow-x:clip}
+@media(min-width:701px){.showcase-tile.is-preview .card-button{transition:none}}
