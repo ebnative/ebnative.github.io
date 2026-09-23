@@ -46,9 +46,9 @@ Bachelor of Arts — Öffentlichkeitsarbeit und Werbung *2020 – 2023*
 
 **Türkisch** — Muttersprache
 
-**Englisch** — B2 — fließend in Wort und Schrift
+**Englisch** — B2
 
-**Deutsch** — B1 — fließend in Wort und Schrift
+**Deutsch** — B1
 
 **Fähigkeiten & Kompetenzen**
 
