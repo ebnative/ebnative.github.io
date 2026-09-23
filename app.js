@@ -323,10 +323,12 @@
 
   function renderCoverflow(preview = false) {
     const tabletGallery = innerWidth >= 701 && (innerWidth <= 1100 || (navigator.maxTouchPoints > 0 && innerWidth <= 1400));
-    const cardSize = Math.max(100, Math.min(track.clientHeight - (tabletGallery ? 16 : 40), innerWidth * (innerWidth <= 700 ? .54 : tabletGallery ? .64 : .29), tabletGallery ? 680 : 410));
+    const cardSize = Math.max(100, Math.min(track.clientHeight - 40, innerWidth * (innerWidth <= 700 ? .54 : innerWidth <= 1024 ? .38 : .29), 410));
+    const cardHeight = tabletGallery ? Math.max(cardSize, Math.min(track.clientHeight - 16, cardSize * 1.5)) : cardSize;
+    track.style.setProperty('--hero-card-height', `${cardHeight}px`);
     track.style.setProperty('--hero-card-size', `${cardSize}px`);
     // Each successive pair tucks farther behind the pair in front of it.
-    const spread = window.innerWidth <= 700 ? [0,.32,.51,.65] : tabletGallery ? [0,.25,.43,.57] : [0,.66,1.14,1.48];
+    const spread = window.innerWidth <= 700 ? [0,.32,.51,.65] : window.innerWidth <= 1024 ? [0,.45,.78,1.02] : [0,.66,1.14,1.48];
     const interpolate = (values, depth) => {
       const lo = Math.min(3, Math.floor(depth));
       return values[lo] + (values[Math.min(lo + 1,3)] - values[lo]) * (depth - lo);

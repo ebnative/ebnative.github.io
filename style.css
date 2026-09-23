@@ -137,7 +137,7 @@ body::after{background:radial-gradient(ellipse 23% 23% at 58% 53%,#ffb87770 0%,#
 .collection-filter:hover::after,.collection-filter[aria-pressed="true"]::after{transform:scaleX(1)}
 .coverflow-top{font-size:10px;padding-top:14px;font-weight:400;letter-spacing:.025em}
 .coverflow-track{perspective:1400px}
-.coverflow-slide{width:var(--hero-card-size,300px);height:var(--hero-card-size,300px);max-height:none;max-width:none;aspect-ratio:1}
+.coverflow-slide{width:var(--hero-card-size,300px);height:var(--hero-card-height,var(--hero-card-size,300px));max-height:none;max-width:none;aspect-ratio:1}
 .coverflow-card,.coverflow-slide.is-active .coverflow-card{padding:0;border:0;border-radius:0;box-shadow:none;background:transparent}
 .coverflow-card img,.coverflow-slide:not([data-category="ai-image"]) .coverflow-card img{border-radius:0;object-fit:cover;background:transparent}
 .coverflow-dots{display:flex;align-items:center;justify-content:center;flex:none;min-height:38px;gap:2px;padding-bottom:8px}
